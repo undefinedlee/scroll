@@ -50,13 +50,24 @@ Scroll.prototype = {
 			self = this;
 
 		var offsetY,
-			top,
+			top = 0,
 			lastTime,
 			lastTop,
 			nowTime,
 			nowTop;
 
+		//var endTimeHandler;
+
 		function moveHandler(e){
+			e.preventDefault();
+			// self.stop();
+			// if(endTimeHandler){
+			// 	clearTimeout(endTimeHandler);
+			// }
+			// endTimeHandler = setTimeout(upHandler, 40);
+
+			e = e.targetTouches[0];
+
 			lastTime = nowTime;
 			lastTop = nowTop;
 
@@ -72,12 +83,13 @@ Scroll.prototype = {
 				top += nowTop - lastTop;
 			}
 
-			target.style.top = top + "px";
+			//target.style.top = top + "px";
+			target.style.transform = "translateY(" + top + "px)";
 		}
 
-		function upHandler(e){
-			document.removeEventListener("mousemove", moveHandler);
-			document.removeEventListener("mouseup", upHandler);
+		function upHandler(){
+			document.removeEventListener("touchmove", moveHandler);
+			document.removeEventListener("touchend", upHandler);
 
 			var velocity = ((nowTop - lastTop) / (nowTime - lastTime) * 1000 || 0) / fps | 0;
 			var scroll;
@@ -87,20 +99,14 @@ Scroll.prototype = {
 
 			function getFSpring(){
 				if(top < minTop){
-					return 1 * (minTop - top);
+					return 3 * (minTop - top);
 				}else if(top > maxTop){
-					return -1 * (top - maxTop);
+					return -3 * (top - maxTop);
 				}
 				return 0;
 			}
 
 			FSpring = getFSpring();
-
-			if(top < minTop){
-				FSpring = 1 * (minTop - top);
-			}else if(top > maxTop){
-				FSpring = -1 * (top - maxTop);
-			}
 
 			if(velocity === 0 && FSpring !== 0){
 				velocity = FSpring * 0.1;
@@ -113,18 +119,18 @@ Scroll.prototype = {
 						top += velocity;
 						//velocity -= Math.min(-minRateOfDecay, velocity * rateOfDecay);
 						FSpring = getFSpring();
-						var FDrag = Math.max(10, 0.02 * velocity * velocity);
+						var FDrag = Math.max(10, 0.01 * velocity * velocity);
+						//var FDrag = Math.max(2, -velocity);
 						velocity += (FDrag + FSpring) * 0.1;
 						self.scrollHandler = setTimeout(scroll, interval);
 					}else if(top < minTop){
 						top += velocity;
 						velocity = Math.max(1, (minTop - top) * 0.2);
 						self.scrollHandler = setTimeout(scroll, interval);
-					}else if(velocity > 0){
-						//top = minTop;
 					}
 
-					target.style.top = top + "px";
+					//target.style.top = top + "px";
+					target.style.transform = "translateY(" + top + "px)";
 				};
 			}else{
 				scroll = function(){
@@ -133,26 +139,29 @@ Scroll.prototype = {
 						top += velocity;
 						//velocity -= Math.max(minRateOfDecay, velocity * rateOfDecay);
 						FSpring = getFSpring();
-						var FDrag = -Math.max(10, 0.02 * velocity * velocity);
+						var FDrag = -Math.max(10, 0.01 * velocity * velocity);
+						//var FDrag = -Math.max(2, velocity);
 						velocity += (FDrag + FSpring) * 0.1;
 						self.scrollHandler = setTimeout(scroll, interval);
 					}else if(top > maxTop){
 						top += velocity;
 						velocity = Math.min(-1, (maxTop - top) * 0.2);
 						self.scrollHandler = setTimeout(scroll, interval);
-					}else if(velocity < 0){
-						//top = maxTop;
 					}
 
-					target.style.top = top + "px";
+					//target.style.top = top + "px";
+					target.style.transform = "translateY(" + top + "px)";
 				};
 			}
 
 			scroll();
 		}
 
-		target.addEventListener("mousedown", function(e){
+		target.addEventListener("touchstart", function(e){
+			e.preventDefault();
 			self.stop();
+
+			e = e.targetTouches[0];
 
 			fps = self.fps;
 			interval = 1000 / fps;
@@ -162,15 +171,15 @@ Scroll.prototype = {
 			minTop = self.range[0];
 			maxTop = self.range[1];
 
-			top = target.offsetTop;
+			//top = target.offsetTop;
 
 			lastTime = nowTime = +new Date();
 			lastTop = nowTop = top;
 			offsetY = e.pageY - top;
 
-			document.addEventListener("mousemove", moveHandler);
+			document.addEventListener("touchmove", moveHandler);
 
-			document.addEventListener("mouseup", upHandler);
+			document.addEventListener("touchend", upHandler);
 		});
 	},
 	refreshRange: function(){
