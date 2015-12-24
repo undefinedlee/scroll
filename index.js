@@ -14,9 +14,15 @@
  		C为加速度系数（物理中为：1 / 质量）
  */
 
-function Scroll(config){
+function Scroll(config, pluginsConfig){
 	this.container = config.container;
 	this.target = config.target;
+
+	// 初始化插件
+	var self = this;
+	Scroll.Plugins.forEach(function(plugin){
+		new plugin.factory(self, pluginsConfig[plugin.name] || {});
+	});
 
 	this.refreshRange();
 	this.bindEvent();
@@ -192,3 +198,4 @@ Scroll.prototype = {
 		}
 	}
 };
+Scroll.Plugins = [];
