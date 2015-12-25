@@ -21,7 +21,7 @@ var CSpring = 10;
 // 加速度系数
 var CA = 0.1;
 // 空气阻力系数
-var CAir = 0.01;
+var CAir = 0.015;
 // 最小阻力
 var minF = 10;
 // 反弹系数
@@ -221,7 +221,7 @@ Scroll.prototype = {
 			}else{
 				onchange = function(top){
 					top = +top.toFixed(2);
-					
+
 					target.style.transform = "translateY(" + top + "px)";
 				};
 			}
