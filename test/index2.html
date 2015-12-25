@@ -13,6 +13,8 @@
         bottom: 0;
     	overflow: hidden;
         background-color: #999;
+        overflow: auto;
+        -webkit-overflow-scrolling: touch;
     }
     #scroll div{
     	position: absolute;
@@ -52,13 +54,13 @@
 		}
 		target.innerHTML = html.join("");
 
-		var scroll = new Scroll({
+		/*var scroll = new Scroll({
 			container: container,
 			target: target
 		});
         scroll.onScroll(function(e){
-            //console.log(e.scrollTop);
-        });
+            console.log(e.scrollTop);
+        });*/
 	</script>
 </body>
 </html>
