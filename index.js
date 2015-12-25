@@ -206,6 +206,8 @@ Scroll.prototype = {
 			var listeners = self.listeners;
 			if(listeners && listeners.length){
 				onchange = function(top){
+					top = +top.toFixed(2);
+
 					target.style.transform = "translateY(" + top + "px)";
 
 					var e = {
@@ -218,6 +220,8 @@ Scroll.prototype = {
 				};
 			}else{
 				onchange = function(top){
+					top = +top.toFixed(2);
+					
 					target.style.transform = "translateY(" + top + "px)";
 				};
 			}
@@ -235,7 +239,7 @@ Scroll.prototype = {
 			this.scrollHandler = null;
 		}
 	},
-	onChange: function(listener){
+	onScroll: function(listener){
 		if(this.listeners){
 			this.listeners.push(listener);
 		}else{
