@@ -14,42 +14,51 @@
  		C为加速度系数（物理中为：1 / 质量）
  */
 
+// 帧频
+var fps = 25;
+// 弹力系数
+var CSpring = 10;
+// 加速度系数
+var CA = 0.1;
+// 空气阻力系数
+var CAir = 0.01;
+// 最小阻力
+var minF = 10;
+// 反弹系数
+var CBack = 0.2;
+// 最低反弹速度
+var minVBack = 1;
+
 function Scroll(config, pluginsConfig){
 	this.container = config.container;
 	this.target = config.target;
 
-	// 初始化插件
-	var self = this;
-	Scroll.Plugins.forEach(function(plugin){
-		new plugin.factory(self, pluginsConfig[plugin.name] || {});
-	});
-
 	this.refreshRange();
 	this.bindEvent();
+
+	// 初始化插件
+	var self = this;
+	pluginsConfig = pluginsConfig || {};
+	Scroll.Plugins.forEach(function(plugin){
+		var config = pluginsConfig[plugin.name];
+
+		if(plugin.default){
+			if(config === false){
+				return;
+			}
+		}else if(!config){
+			return;
+		}
+
+		new plugin.factory(self, config && typeof config === "object" ? config : {});
+	});
 }
 Scroll.prototype = {
-	// 衰减速率（每帧衰减速度的比例）
-	rateOfDecay: 0.1,
-	// 最小衰减速度
-	minRateOfDecay: 1,
 	// 最大溢出范围
 	maxOverflow: 100,
-	// 帧频
-	fps: 25,
-	// 空气阻力系数
-	CAir: 0.02,
-	// 基础阻力
-	FBase: 10,
-	// 加速度系数
-	CA: 0.1,
-	// 弹力系数
-	CSpring: 1,
 	bindEvent: function(){
 		var target = this.target,
-			fps,
 			interval,
-			rateOfDecay,
-			minRateOfDecay,
 			maxOverflow,
 			minTop,
 			maxTop,
@@ -60,17 +69,21 @@ Scroll.prototype = {
 			lastTime,
 			lastTop,
 			nowTime,
-			nowTop;
+			nowTop,
+			onchange;
 
-		//var endTimeHandler;
+		// 获取当前弹力
+		function getFSpring(){
+			if(top < minTop){
+				return CSpring * (minTop - top);
+			}else if(top > maxTop){
+				return -CSpring * (top - maxTop);
+			}
+			return 0;
+		}
 
 		function moveHandler(e){
 			e.preventDefault();
-			// self.stop();
-			// if(endTimeHandler){
-			// 	clearTimeout(endTimeHandler);
-			// }
-			// endTimeHandler = setTimeout(upHandler, 40);
 
 			e = e.targetTouches[0];
 
@@ -89,74 +102,77 @@ Scroll.prototype = {
 				top += nowTop - lastTop;
 			}
 
-			//target.style.top = top + "px";
-			target.style.transform = "translateY(" + top + "px)";
+			onchange(top);
 		}
 
 		function upHandler(){
 			document.removeEventListener("touchmove", moveHandler);
 			document.removeEventListener("touchend", upHandler);
 
+			// 初始速度
 			var velocity = ((nowTop - lastTop) / (nowTime - lastTime) * 1000 || 0) / fps | 0;
 			var scroll;
 
 			// 弹力
-			var FSpring = 0;
+			var FSpring = getFSpring();
 
-			function getFSpring(){
-				if(top < minTop){
-					return 3 * (minTop - top);
-				}else if(top > maxTop){
-					return -3 * (top - maxTop);
-				}
-				return 0;
-			}
-
-			FSpring = getFSpring();
-
+			// 假如初始速度为0，并且有弹力，则给个弹力方向的微小速度
 			if(velocity === 0 && FSpring !== 0){
-				velocity = FSpring * 0.1;
+				//velocity = FSpring > 0 ? 0.0001 : -0.0001;
+				velocity = FSpring / CSpring * CBack;
 			}
 
 			if(velocity < 0){
 				scroll = function(){
 					self.scrollHandler = null;
-					if(velocity < 0){
+
+					var FDrag;
+
+					if(velocity < 0 || top < minTop){
 						top += velocity;
-						//velocity -= Math.min(-minRateOfDecay, velocity * rateOfDecay);
-						FSpring = getFSpring();
-						var FDrag = Math.max(10, 0.01 * velocity * velocity);
-						//var FDrag = Math.max(2, -velocity);
-						velocity += (FDrag + FSpring) * 0.1;
-						self.scrollHandler = setTimeout(scroll, interval);
-					}else if(top < minTop){
-						top += velocity;
-						velocity = Math.max(1, (minTop - top) * 0.2);
+						if(velocity < 0){
+							FSpring = getFSpring();
+							// 阻力
+							FDrag = Math.max(minF, CAir * velocity * velocity);
+							// 增加当前作用力下的加速度
+							velocity += (FDrag + FSpring) * CA;
+							if(velocity > 0){
+								velocity = 0;
+							}
+						}else{
+							// 反弹阶段
+							velocity = Math.max(minVBack, (minTop - top) * CBack);
+						}
 						self.scrollHandler = setTimeout(scroll, interval);
 					}
 
-					//target.style.top = top + "px";
-					target.style.transform = "translateY(" + top + "px)";
+					onchange(top);
 				};
 			}else{
 				scroll = function(){
 					self.scrollHandler = null;
-					if(velocity > 0){
+
+					var FDrag;
+
+					if(velocity > 0 || top > maxTop){
 						top += velocity;
-						//velocity -= Math.max(minRateOfDecay, velocity * rateOfDecay);
-						FSpring = getFSpring();
-						var FDrag = -Math.max(10, 0.01 * velocity * velocity);
-						//var FDrag = -Math.max(2, velocity);
-						velocity += (FDrag + FSpring) * 0.1;
-						self.scrollHandler = setTimeout(scroll, interval);
-					}else if(top > maxTop){
-						top += velocity;
-						velocity = Math.min(-1, (maxTop - top) * 0.2);
+						if(velocity > 0){
+							FSpring = getFSpring();
+							// 阻力
+							FDrag = -Math.max(minF, CAir * velocity * velocity);
+							// 增加当前作用力下的加速度
+							velocity += (FDrag + FSpring) * CA;
+							if(velocity < 0){
+								velocity = 0;
+							}
+						}else{
+							// 反弹阶段
+							velocity = Math.min(-minVBack, (maxTop - top) * CBack);
+						}
 						self.scrollHandler = setTimeout(scroll, interval);
 					}
 
-					//target.style.top = top + "px";
-					target.style.transform = "translateY(" + top + "px)";
+					onchange(top);
 				};
 			}
 
@@ -169,22 +185,44 @@ Scroll.prototype = {
 
 			e = e.targetTouches[0];
 
-			fps = self.fps;
 			interval = 1000 / fps;
-			rateOfDecay = self.rateOfDecay;
-			minRateOfDecay = self.minRateOfDecay;
 			maxOverflow = self.maxOverflow * 2;
 			minTop = self.range[0];
 			maxTop = self.range[1];
 
-			//top = target.offsetTop;
+			// 获取当前位置
+			var transform = target.style.transform;
+			transform = transform.match(/translateY\((\-?\d+(\.\d+)?)px\)/);
+			if(transform){
+				top = +transform[1];
+			}else{
+				top = 0;
+			}
 
 			lastTime = nowTime = +new Date();
 			lastTop = nowTop = top;
 			offsetY = e.pageY - top;
 
-			document.addEventListener("touchmove", moveHandler);
+			var listeners = self.listeners;
+			if(listeners && listeners.length){
+				onchange = function(top){
+					target.style.transform = "translateY(" + top + "px)";
 
+					var e = {
+						scrollTop: -top
+					};
+
+					listeners.forEach(function(listener){
+						listener.call(self, e);
+					});
+				};
+			}else{
+				onchange = function(top){
+					target.style.transform = "translateY(" + top + "px)";
+				};
+			}
+
+			document.addEventListener("touchmove", moveHandler);
 			document.addEventListener("touchend", upHandler);
 		});
 	},
@@ -196,6 +234,14 @@ Scroll.prototype = {
 			clearTimeout(this.scrollHandler);
 			this.scrollHandler = null;
 		}
+	},
+	onChange: function(listener){
+		if(this.listeners){
+			this.listeners.push(listener);
+		}else{
+			this.listeners = [listener];
+		}
 	}
 };
+// 插件列表
 Scroll.Plugins = [];

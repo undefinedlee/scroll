@@ -41,7 +41,7 @@
 
 		var html = [];
 		for(var i = 0; i < 100; i ++){
-			html.push('<p style="height:{num}px;line-height:{num}px;">{num}</p>'.replace(/\{num\}/g, Math.random() * 300));
+			html.push('<p style="height:{num}px;line-height:{num}px;">{num}</p>'.replace(/\{num\}/g, Math.random() * 100));
 		}
 		target.innerHTML = html.join("");
 
@@ -49,6 +49,9 @@
 			container: container,
 			target: target
 		});
+        scroll.onChange(function(e){
+            console.log(e.scrollTop);
+        });
 	</script>
 </body>
 </html>
